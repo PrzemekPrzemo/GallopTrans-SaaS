@@ -3,9 +3,11 @@
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
@@ -19,6 +21,11 @@ Route::get('/', function () {
 // Publiczna oferta (token) - bez logowania
 Route::get('/q/{token}',     [QuoteController::class, 'public'])->name('quotes.public');
 Route::get('/q/{token}/pdf', [QuoteController::class, 'publicPdf'])->name('quotes.public.pdf');
+
+// Publiczna strona firmowa (per-tenant) + widget JS
+Route::get('/o/{slug}',  [PublicPageController::class, 'show'])->name('public.page');
+Route::post('/o/{slug}/inquiry', [PublicPageController::class, 'submitInquiry'])->name('public.page.inquiry');
+Route::get('/widget.js', [PublicPageController::class, 'widgetScript'])->name('public.widget');
 
 // Onboarding (po rejestracji) - tu user JESZCZE nie ma organization
 Route::middleware('auth')->group(function () {
@@ -78,6 +85,11 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
         // Ustawienia (per-group form)
         Route::get('/settings',          [SettingsController::class, 'edit'])->name('settings.edit');
         Route::post('/settings',         [SettingsController::class, 'update'])->name('settings.update');
+
+        // Zapytania ofertowe (od klientów z widgetu / publicznej strony)
+        Route::get('/inquiries',                [InquiryController::class, 'index'])->name('inquiries.index');
+        Route::patch('/inquiries/{inquiry}',    [InquiryController::class, 'updateStatus'])->name('inquiries.status');
+        Route::delete('/inquiries/{inquiry}',   [InquiryController::class, 'destroy'])->name('inquiries.destroy');
 
     });
 });

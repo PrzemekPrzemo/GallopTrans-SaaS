@@ -57,6 +57,27 @@
 
                 <button class="px-5 py-2 bg-indigo-600 text-white rounded font-medium">Zapisz ustawienia</button>
             </form>
+
+            <div class="mt-8 bg-white shadow-sm rounded-lg p-6">
+                <div class="font-medium mb-3 text-gray-700 uppercase text-sm">Twoja publiczna strona i widget WWW</div>
+
+                <p class="text-sm text-gray-600">
+                    Adres publicznej strony Twojej firmy:
+                    <a href="{{ route('public.page', $organization->slug) }}" target="_blank" class="text-indigo-600 break-all">
+                        {{ route('public.page', $organization->slug) }}
+                    </a>
+                </p>
+
+                <p class="text-sm text-gray-600 mt-4">
+                    Aby osadzić formularz zapytania ofertowego na własnej WWW klienta końcowego,
+                    wklej poniższy snippet w miejsce gdzie ma się pojawić:
+                </p>
+
+                <pre class="mt-2 text-xs bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto select-all"
+                >&lt;script src="{{ route('public.widget', ['org' => $organization->slug]) }}"&gt;&lt;/script&gt;</pre>
+
+                <p class="text-xs text-gray-500 mt-2">Limit: 10 zapytań / godzinę / IP. Wbudowany honeypot przeciw botom.</p>
+            </div>
         </div>
     </div>
 </x-app-layout>

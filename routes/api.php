@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\ApiInquiryController;
 use Illuminate\Support\Facades\Route;
 
-// Publiczne API dla widgetu zapytań ofertowych z WWW klienta SaaS.
-// Endpoint: POST /api/inquiry  (CORS, rate-limit, tenant po slug/api_key)
-// TODO: dodać ApiInquiryController w kolejnej iteracji.
-
 Route::get('/health', fn () => ['ok' => true, 'service' => 'galloptrans']);
+
+// Publiczne API zapytań ofertowych (do widgetu osadzanego na WWW klienta).
+// CORS jest ustawiony globalnie (config/cors.php).
+Route::post('/o/{slug}/inquiry', [ApiInquiryController::class, 'store'])
+    ->name('api.inquiry.store');

@@ -21,6 +21,9 @@
                     <x-nav-link :href="route('quotes.index')" :active="request()->routeIs('quotes.*')">
                         Oferty
                     </x-nav-link>
+                    <x-nav-link :href="route('inquiries.index')" :active="request()->routeIs('inquiries.*')">
+                        Zapytania
+                    </x-nav-link>
                     <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
                         Raporty
                     </x-nav-link>
