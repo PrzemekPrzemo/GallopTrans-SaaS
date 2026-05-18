@@ -82,7 +82,19 @@ final class XmlInvoiceBuilder
         $fa->appendChild($dom->createElement('P_15',   self::amount($invoice->total_gross)));  // razem brutto
 
         $fa->appendChild($dom->createElement('Adnotacje', 'GallopTrans — transport koni'));
-        $fa->appendChild($dom->createElement('RodzajFaktury', 'VAT'));
+
+        // RodzajFaktury wg KSeF FA(2):
+        //   VAT      — zwykła faktura,
+        //   ZAL      — faktura zaliczkowa,
+        //   ROZ      — faktura końcowa rozliczeniowa (po zaliczkach),
+        //   KOREKTA  — faktura korygująca.
+        $rodzaj = match (true) {
+            $invoice->type === 'correction'        => 'KOREKTA',
+            $invoice->invoice_subtype === 'advance'=> 'ZAL',
+            $invoice->invoice_subtype === 'final'  => 'ROZ',
+            default                                => 'VAT',
+        };
+        $fa->appendChild($dom->createElement('RodzajFaktury', $rodzaj));
 
         // === Pozycje faktury ===
         $sort = 1;

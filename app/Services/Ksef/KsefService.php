@@ -169,30 +169,50 @@ final class KsefService
      * Inicjuje sesję KSeF tokenem zapisanym w organizations.ksef_token_encrypted.
      * Zwraca SessionToken używany w kolejnych żądaniach.
      */
+    /**
+     * Inicjuje sesję KSeF. Wybór metody auth:
+     *   - jeśli organizacja ma wgrany certyfikat (.pem/.pfx) → InitSessionSigned
+     *     z podpisem XAdES (uwierzytelnienie kwalifikowanym podpisem).
+     *   - inaczej → InitSessionToken z tokenem. W trybie 'production' token
+     *     jest dodatkowo szyfrowany kluczem publicznym MF (RSA-OAEP);
+     *     w trybie 'test' (sandbox) sandbox akceptuje token plain.
+     */
     private static function openSession(Organization $org): string
     {
-        if (! $org->ksef_token_encrypted) {
-            throw new RuntimeException('Brak tokenu KSeF — uzupełnij w panelu ustawień.');
-        }
+        $nip = preg_replace('/[^0-9]/', '', $org->ksef_identifier ?? $org->company_nip ?? '');
 
-        $token = Crypt::decryptString($org->ksef_token_encrypted);
-
-        // 1. AuthorisationChallenge
         $ch = Http::timeout(20)->post(self::baseUrl($org) . '/online/Session/AuthorisationChallenge', [
-            'contextIdentifier' => [
-                'type'       => 'onip',
-                'identifier' => preg_replace('/[^0-9]/', '', $org->ksef_identifier ?? $org->company_nip ?? ''),
-            ],
+            'contextIdentifier' => ['type' => 'onip', 'identifier' => $nip],
         ]);
         if (! $ch->ok()) {
             throw new RuntimeException('KSeF challenge: ' . $ch->body());
         }
         $challenge = $ch->json('challenge');
-        $timestamp = $ch->json('timestamp');
 
-        // 2. InitToken — token zaszyfrowany RSA publicznym kluczem KSeF.
-        // Pełna implementacja wymaga klucza publicznego MF (publikowanego osobno per środowisko).
-        // Tutaj wysyłamy token w trybie 'plain' — zadziała tylko w testowym środowisku KSeF.
+        $sessionToken = $org->ksef_cert_path
+            ? self::initSessionWithXades($org, $challenge, $nip)
+            : self::initSessionWithToken($org, $challenge, $nip);
+
+        if (! $sessionToken) {
+            throw new RuntimeException('KSeF: brak SessionToken w odpowiedzi.');
+        }
+        return $sessionToken;
+    }
+
+    private static function initSessionWithToken(Organization $org, string $challenge, string $nip): ?string
+    {
+        if (! $org->ksef_token_encrypted) {
+            throw new RuntimeException('Brak tokenu KSeF — uzupełnij w panelu ustawień lub wgraj certyfikat.');
+        }
+
+        $token = Crypt::decryptString($org->ksef_token_encrypted);
+
+        // W produkcji KSeF wymaga zaszyfrowania tokenu kluczem publicznym MF (RSA-OAEP).
+        // Sandbox akceptuje token plain. Payload do zaszyfrowania: "token|timestamp_ms".
+        $encryptedToken = $org->ksef_mode === 'production'
+            ? MfPublicKey::encryptToken($org->ksef_mode, $token . '|' . (int) (microtime(true) * 1000))
+            : $token;
+
         $payload = sprintf('<?xml version="1.0" encoding="UTF-8"?>
 <ns3:InitSessionTokenRequest xmlns:ns3="http://ksef.mf.gov.pl/schema/gtw/svc/online/auth/request/2021/10/01/0001">
     <ns3:Context>
@@ -213,8 +233,8 @@ final class KsefService
     </ns3:Context>
 </ns3:InitSessionTokenRequest>',
             htmlspecialchars($challenge, ENT_XML1, 'UTF-8'),
-            htmlspecialchars(preg_replace('/[^0-9]/', '', $org->ksef_identifier ?? $org->company_nip ?? ''), ENT_XML1, 'UTF-8'),
-            htmlspecialchars($token, ENT_XML1, 'UTF-8'),
+            htmlspecialchars($nip, ENT_XML1, 'UTF-8'),
+            htmlspecialchars($encryptedToken, ENT_XML1, 'UTF-8'),
         );
 
         $init = Http::timeout(20)
@@ -222,15 +242,50 @@ final class KsefService
             ->post(self::baseUrl($org) . '/online/Session/InitToken');
 
         if (! $init->ok()) {
-            throw new RuntimeException('KSeF init session: ' . $init->body());
+            throw new RuntimeException('KSeF init session (token): ' . $init->body());
         }
 
-        $sessionToken = $init->json('sessionToken.token');
-        if (! $sessionToken) {
-            throw new RuntimeException('KSeF: brak SessionToken w odpowiedzi.');
+        return $init->json('sessionToken.token');
+    }
+
+    private static function initSessionWithXades(Organization $org, string $challenge, string $nip): ?string
+    {
+        $payload = sprintf('<?xml version="1.0" encoding="UTF-8"?>
+<ns3:InitSessionSignedRequest xmlns:ns3="http://ksef.mf.gov.pl/schema/gtw/svc/online/auth/request/2021/10/01/0001">
+    <ns3:Context>
+        <ns3:Challenge>%s</ns3:Challenge>
+        <ns3:Identifier xsi:type="ns3:SubjectIdentifierByCompanyType" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <ns3:Identifier>%s</ns3:Identifier>
+        </ns3:Identifier>
+        <ns3:DocumentType>
+            <ns3:Service>KSeF</ns3:Service>
+            <ns3:FormCode>
+                <ns3:SystemCode>FA (2)</ns3:SystemCode>
+                <ns3:SchemaVersion>1-0E</ns3:SchemaVersion>
+                <ns3:TargetNamespace>http://crd.gov.pl/wzor/2023/06/29/12648/</ns3:TargetNamespace>
+                <ns3:Value>FA</ns3:Value>
+            </ns3:FormCode>
+        </ns3:DocumentType>
+    </ns3:Context>
+</ns3:InitSessionSignedRequest>',
+            htmlspecialchars($challenge, ENT_XML1, 'UTF-8'),
+            htmlspecialchars($nip, ENT_XML1, 'UTF-8'),
+        );
+
+        // Hasło PFX (jeśli było) trzymamy w ksef_token_encrypted. Dla PEM bez hasła zostaw null.
+        $certPassword = $org->ksef_token_encrypted ? Crypt::decryptString($org->ksef_token_encrypted) : null;
+
+        $signedXml = XadesSigner::sign($payload, $org->ksef_cert_path, $certPassword);
+
+        $init = Http::timeout(30)
+            ->withBody($signedXml, 'application/octet-stream')
+            ->post(self::baseUrl($org) . '/online/Session/InitSigned');
+
+        if (! $init->ok()) {
+            throw new RuntimeException('KSeF init session (XAdES): ' . $init->body());
         }
 
-        return $sessionToken;
+        return $init->json('sessionToken.token');
     }
 
     private static function baseUrl(Organization $org): string
