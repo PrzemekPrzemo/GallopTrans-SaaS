@@ -69,11 +69,22 @@
                         @csrf
                         <button class="px-4 py-2 bg-indigo-600 text-white rounded">Wyślij do KSeF</button>
                     </form>
+                @elseif ($invoice->ksef_status === 'sending' || ($invoice->ksef_status === 'sent' && ! $invoice->upo_path))
+                    <form method="POST" action="{{ route('invoices.ksef-status', $invoice) }}" class="inline">
+                        @csrf
+                        <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded">Sprawdź status / pobierz UPO</button>
+                    </form>
                 @elseif ($invoice->ksef_status === 'manual')
                     <div class="text-sm text-gray-600">
                         KSeF jest wyłączony dla tej organizacji.
                         <a href="{{ route('settings.ksef') }}" class="text-indigo-600">→ Włącz w ustawieniach KSeF</a>
                     </div>
+                @endif
+
+                @if ($invoice->upo_path)
+                    <a href="{{ route('invoices.upo', $invoice) }}" class="inline-block mt-2 text-sm text-indigo-600">
+                        📄 Pobierz UPO (PDF z potwierdzeniem z MF)
+                    </a>
                 @endif
 
                 @if ($invoice->ksef_response)

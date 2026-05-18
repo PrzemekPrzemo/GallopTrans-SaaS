@@ -42,6 +42,63 @@ final class KsefService
     }
 
     /**
+     * Sprawdza status wcześniej wysłanej faktury i pobiera UPO (Urzędowe
+     * Poświadczenie Otrzymania) jako PDF jeśli faktura już została
+     * zaakceptowana przez KSeF.
+     *
+     * Zwraca true gdy UPO zostało pobrane i zapisane (status: confirmed).
+     */
+    public static function fetchStatus(Invoice $invoice): bool
+    {
+        $org = $invoice->organization;
+        if (! self::isEnabled($org) || ! $invoice->ksef_reference) {
+            return false;
+        }
+
+        $session = self::openSession($org);
+
+        // Sprawdź status referencji.
+        $statusResp = Http::timeout(20)
+            ->withHeaders(['SessionToken' => $session, 'Accept' => 'application/json'])
+            ->get(self::baseUrl($org) . "/online/Invoice/Status/{$invoice->ksef_reference}");
+
+        if (! $statusResp->ok()) {
+            $invoice->update(['ksef_response' => $statusResp->json() ?: ['error' => $statusResp->body()]]);
+            return false;
+        }
+
+        $status = $statusResp->json();
+        $processingCode = (int) ($status['processingCode'] ?? 0);
+
+        // Kod 200 = poprawnie zaakceptowana.
+        if ($processingCode !== 200) {
+            $invoice->update(['ksef_response' => $status]);
+            return false;
+        }
+
+        $ksefNumber = $status['invoiceStatus']['ksefReferenceNumber'] ?? $invoice->ksef_reference;
+
+        // Pobierz UPO (PDF).
+        $upoResp = Http::timeout(30)
+            ->withHeaders(['SessionToken' => $session, 'Accept' => 'application/pdf'])
+            ->get(self::baseUrl($org) . "/online/Invoice/Upo/{$ksefNumber}");
+
+        if ($upoResp->ok()) {
+            $upoPath = sprintf('ksef/%d/upo/%s.pdf', $org->id, $invoice->number);
+            Storage::disk('local')->put($upoPath, $upoResp->body());
+            $invoice->update([
+                'upo_path'              => $upoPath,
+                'ksef_status'           => 'sent',
+                'ksef_confirmed_at'     => now(),
+                'ksef_response'         => $status,
+            ]);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Wystawia fakturę w KSeF. Aktualizuje invoice.ksef_* na podstawie odpowiedzi.
      * Zwraca true jeśli reference number został przyznany (faktura w KSeF).
      */
