@@ -56,6 +56,11 @@ class Quote extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
     public function totalPaid(): float
     {
         return (float) $this->payments()->sum('amount_gross');

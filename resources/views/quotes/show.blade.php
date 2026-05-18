@@ -153,6 +153,27 @@
                 </div>
             </div>
 
+            {{-- Faktura — pokazujemy tylko gdy oferta zaakceptowana --}}
+            @if ($quote->status === 'accepted')
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="font-medium mb-2">Faktura VAT</div>
+                    @if ($quote->invoice)
+                        <div class="flex items-center justify-between">
+                            <div>
+                                Faktura <a class="text-indigo-600 font-mono" href="{{ route('invoices.show', $quote->invoice) }}">{{ $quote->invoice->number }}</a>
+                                · KSeF: <span class="text-xs px-2 py-0.5 rounded bg-gray-100">{{ $quote->invoice->ksef_status }}</span>
+                            </div>
+                            <a class="text-indigo-600 text-sm" href="{{ route('invoices.show', $quote->invoice) }}">→ Otwórz</a>
+                        </div>
+                    @else
+                        <form method="POST" action="{{ route('invoices.from-quote', $quote) }}" onsubmit="return confirm('Wystawić fakturę z tej oferty?')">
+                            @csrf
+                            <button class="px-4 py-2 bg-emerald-600 text-white rounded">Wystaw fakturę</button>
+                        </form>
+                    @endif
+                </div>
+            @endif
+
             <div class="bg-white rounded-lg shadow-sm p-6 text-sm text-gray-600">
                 Link publiczny dla klienta:
                 <a class="text-indigo-600 break-all" href="{{ route('quotes.public', $quote->public_token) }}">{{ route('quotes.public', $quote->public_token) }}</a>

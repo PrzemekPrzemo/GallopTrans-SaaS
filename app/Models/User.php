@@ -31,6 +31,7 @@ class User extends Authenticatable
         'locale',
         'calendar_token',
         'is_active',
+        'is_super_admin',
         'last_login_at',
     ];
 
@@ -46,6 +47,7 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_super_admin' => 'boolean',
         ];
     }
 

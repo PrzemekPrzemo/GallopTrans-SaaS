@@ -21,6 +21,9 @@
                     <x-nav-link :href="route('quotes.index')" :active="request()->routeIs('quotes.*')">
                         Oferty
                     </x-nav-link>
+                    <x-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')">
+                        Faktury
+                    </x-nav-link>
                     <x-nav-link :href="route('inquiries.index')" :active="request()->routeIs('inquiries.*')">
                         Zapytania
                     </x-nav-link>
@@ -33,12 +36,20 @@
                     <x-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">
                         Pojazdy
                     </x-nav-link>
+                    <x-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
+                        Zespół
+                    </x-nav-link>
                     <x-nav-link :href="route('settings.edit')" :active="request()->routeIs('settings.*')">
                         Ustawienia
                     </x-nav-link>
                     <x-nav-link :href="route('billing.plans')" :active="request()->routeIs('billing.*')">
                         Subskrypcja
                     </x-nav-link>
+                    @if (auth()->user()?->is_super_admin)
+                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
+                            👑 Admin
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 

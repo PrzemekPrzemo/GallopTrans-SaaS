@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverDashboardController;
 use App\Http\Controllers\InquiryController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\KsefSettingsController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
@@ -13,6 +16,7 @@ use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,8 +25,9 @@ Route::get('/', function () {
 })->name('home');
 
 // Publiczna oferta (token) - bez logowania
-Route::get('/q/{token}',     [QuoteController::class, 'public'])->name('quotes.public');
-Route::get('/q/{token}/pdf', [QuoteController::class, 'publicPdf'])->name('quotes.public.pdf');
+Route::get('/q/{token}',         [QuoteController::class, 'public'])->name('quotes.public');
+Route::get('/q/{token}/pdf',     [QuoteController::class, 'publicPdf'])->name('quotes.public.pdf');
+Route::post('/q/{token}/accept', [QuoteController::class, 'publicAccept'])->name('quotes.public.accept');
 
 // Publiczna strona firmowa (per-tenant) + widget JS
 Route::get('/o/{slug}',  [PublicPageController::class, 'show'])->name('public.page');
@@ -31,6 +36,10 @@ Route::get('/widget.js', [PublicPageController::class, 'widgetScript'])->name('p
 
 // iCal feed kierowcy (publiczny, autoryzowany tokenem w URL).
 Route::get('/calendar/{token}.ics', [CalendarController::class, 'feed'])->name('calendar.feed');
+
+// Akceptacja zaproszenia do zespołu (publiczna, tokenem)
+Route::get('/invite/{token}',  [TeamController::class, 'showAccept'])->name('invitations.accept');
+Route::post('/invite/{token}', [TeamController::class, 'processAccept'])->name('invitations.process');
 
 // Onboarding (po rejestracji) - tu user JESZCZE nie ma organization
 Route::middleware('auth')->group(function () {
@@ -94,12 +103,36 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
         Route::get('/settings',          [SettingsController::class, 'edit'])->name('settings.edit');
         Route::post('/settings',         [SettingsController::class, 'update'])->name('settings.update');
 
+        // Ustawienia KSeF (osobny ekran — wgrywanie cert + token)
+        Route::get('/settings/ksef',          [KsefSettingsController::class, 'edit'])->name('settings.ksef');
+        Route::post('/settings/ksef',         [KsefSettingsController::class, 'update'])->name('settings.ksef.update');
+        Route::delete('/settings/ksef/cert',  [KsefSettingsController::class, 'deleteCert'])->name('settings.ksef.delete-cert');
+
+        // Faktury
+        Route::get('/invoices',            [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/invoices/{invoice}',  [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::post('/quotes/{quote}/invoice', [InvoiceController::class, 'storeFromQuote'])->name('invoices.from-quote');
+        Route::post('/invoices/{invoice}/ksef', [InvoiceController::class, 'sendToKsef'])->name('invoices.ksef-send');
+
+        // Zespół (multi-user)
+        Route::get('/team',                          [TeamController::class, 'index'])->name('team.index');
+        Route::post('/team/invite',                  [TeamController::class, 'invite'])->name('team.invite');
+        Route::delete('/team/invitations/{invitation}', [TeamController::class, 'revoke'])->name('team.revoke');
+        Route::delete('/team/members/{user}',        [TeamController::class, 'removeMember'])->name('team.remove');
+
         // Zapytania ofertowe (od klientów z widgetu / publicznej strony)
         Route::get('/inquiries',                [InquiryController::class, 'index'])->name('inquiries.index');
         Route::patch('/inquiries/{inquiry}',    [InquiryController::class, 'updateStatus'])->name('inquiries.status');
         Route::delete('/inquiries/{inquiry}',   [InquiryController::class, 'destroy'])->name('inquiries.destroy');
 
     });
+});
+
+// Admin panel SaaS-a (poza ensure.org, bo super_admin nie ma własnej organizacji)
+Route::middleware(['auth', 'ensure.super_admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/',                  [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/organizations',     [AdminController::class, 'organizations'])->name('organizations');
+    Route::get('/organizations/{id}',[AdminController::class, 'showOrganization'])->name('organization');
 });
 
 require __DIR__.'/auth.php';
