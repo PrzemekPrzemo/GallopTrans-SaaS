@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalculatorController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DriverDashboardController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PaymentController;
@@ -26,6 +28,9 @@ Route::get('/q/{token}/pdf', [QuoteController::class, 'publicPdf'])->name('quote
 Route::get('/o/{slug}',  [PublicPageController::class, 'show'])->name('public.page');
 Route::post('/o/{slug}/inquiry', [PublicPageController::class, 'submitInquiry'])->name('public.page.inquiry');
 Route::get('/widget.js', [PublicPageController::class, 'widgetScript'])->name('public.widget');
+
+// iCal feed kierowcy (publiczny, autoryzowany tokenem w URL).
+Route::get('/calendar/{token}.ics', [CalendarController::class, 'feed'])->name('calendar.feed');
 
 // Onboarding (po rejestracji) - tu user JESZCZE nie ma organization
 Route::middleware('auth')->group(function () {
@@ -51,6 +56,9 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
     Route::middleware('ensure.subscribed')->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Panel kierowcy (rola 'driver' lub każdy user — pokazuje swoje trasy)
+        Route::get('/my-trips', [DriverDashboardController::class, 'index'])->name('driver.dashboard');
 
         // Kalkulator tras
         Route::prefix('calculator')->name('calculator.')->group(function () {
