@@ -11,6 +11,7 @@ use App\Http\Controllers\DriverDashboardController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KsefSettingsController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PaymentController;
@@ -26,6 +27,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
+
+// Zmiana języka UI (dostępne dla gości i zalogowanych).
+Route::get('/locale/{locale}', [LocaleController::class, 'switch'])
+    ->whereIn('locale', \App\Http\Middleware\SetLocale::SUPPORTED)
+    ->name('locale.switch');
 
 // Publiczna oferta (token) - bez logowania
 Route::get('/q/{token}',         [QuoteController::class, 'public'])->name('quotes.public');

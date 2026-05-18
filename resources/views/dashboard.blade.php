@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Pulpit</h2>
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Pulpit') }}</h2>
     </x-slot>
 
     <div class="py-8">
@@ -16,28 +16,29 @@
             @if ($stats['overdue_count'] > 0)
                 <div class="bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded flex justify-between items-center">
                     <div>
-                        <strong>⚠ {{ $stats['overdue_count'] }}</strong> {{ $stats['overdue_count'] == 1 ? 'zaległa faktura' : 'zaległych faktur' }}
-                        na łączną kwotę <strong>{{ number_format($stats['overdue_amount'], 2, ',', ' ') }} zł</strong>
+                        <strong>⚠ {{ $stats['overdue_count'] }}</strong>
+                        {{ $stats['overdue_count'] == 1 ? __('zaległa faktura') : __('zaległych faktur') }}
+                        {{ __('na łączną kwotę') }} <strong>{{ number_format($stats['overdue_amount'], 2, ',', ' ') }} zł</strong>
                     </div>
-                    <a href="{{ route('invoices.index') }}" class="text-sm font-medium underline">→ Zobacz faktury</a>
+                    <a href="{{ route('invoices.index') }}" class="text-sm font-medium underline">→ {{ __('Zobacz faktury') }}</a>
                 </div>
             @endif
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white p-5 rounded-lg shadow-sm">
-                    <div class="text-sm text-gray-500">Oferty (łącznie)</div>
+                    <div class="text-sm text-gray-500">{{ __('Oferty (łącznie)') }}</div>
                     <div class="text-3xl font-semibold mt-1">{{ $stats['quotes_total'] }}</div>
                 </div>
                 <div class="bg-white p-5 rounded-lg shadow-sm">
-                    <div class="text-sm text-gray-500">Oferty (miesiąc)</div>
+                    <div class="text-sm text-gray-500">{{ __('Oferty (miesiąc)') }}</div>
                     <div class="text-3xl font-semibold mt-1">{{ $stats['quotes_month'] }}</div>
                 </div>
                 <div class="bg-white p-5 rounded-lg shadow-sm">
-                    <div class="text-sm text-gray-500">Nowe zapytania</div>
+                    <div class="text-sm text-gray-500">{{ __('Nowe zapytania') }}</div>
                     <div class="text-3xl font-semibold mt-1">{{ $stats['inquiries_new'] }}</div>
                 </div>
                 <div class="bg-white p-5 rounded-lg shadow-sm">
-                    <div class="text-sm text-gray-500">Przychód (miesiąc)</div>
+                    <div class="text-sm text-gray-500">{{ __('Przychód (miesiąc)') }}</div>
                     <div class="text-3xl font-semibold mt-1">{{ number_format($stats['revenue_month'], 2, ',', ' ') }} zł</div>
                 </div>
             </div>

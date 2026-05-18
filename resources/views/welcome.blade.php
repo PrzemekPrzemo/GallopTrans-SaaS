@@ -1,20 +1,28 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GallopTrans — SaaS dla transportu koni</title>
+    <title>GallopTrans — SaaS {{ __('dla transportu koni') }}</title>
     @vite(['resources/css/app.css'])
 </head>
 <body class="bg-gradient-to-b from-indigo-50 via-white to-white font-sans">
     <nav class="absolute top-0 inset-x-0 px-6 py-4 flex justify-between items-center">
         <div class="font-bold text-xl text-indigo-700">GallopTrans</div>
-        <div class="space-x-4 text-sm">
+        <div class="space-x-3 text-sm flex items-center">
+            @php $current = app()->getLocale(); $flags = ['pl' => '🇵🇱', 'en' => '🇬🇧', 'de' => '🇩🇪']; @endphp
+            <div class="flex items-center gap-1 mr-2">
+                @foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $loc)
+                    <a href="{{ route('locale.switch', $loc) }}"
+                       title="{{ strtoupper($loc) }}"
+                       class="px-1 text-lg {{ $loc === $current ? 'opacity-100' : 'opacity-50 hover:opacity-100' }}">{{ $flags[$loc] }}</a>
+                @endforeach
+            </div>
             @auth
-                <a href="{{ route('dashboard') }}" class="px-4 py-2 bg-indigo-600 text-white rounded">Pulpit</a>
+                <a href="{{ route('dashboard') }}" class="px-4 py-2 bg-indigo-600 text-white rounded">{{ __('Pulpit') }}</a>
             @else
-                <a href="{{ route('login') }}" class="text-gray-700 hover:text-indigo-700">Zaloguj się</a>
-                <a href="{{ route('register') }}" class="px-4 py-2 bg-indigo-600 text-white rounded">Wypróbuj za darmo</a>
+                <a href="{{ route('login') }}" class="text-gray-700 hover:text-indigo-700">{{ __('Zaloguj się') }}</a>
+                <a href="{{ route('register') }}" class="px-4 py-2 bg-indigo-600 text-white rounded">{{ __('Wypróbuj za darmo') }}</a>
             @endauth
         </div>
     </nav>
