@@ -55,4 +55,14 @@ class Quote extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function totalPaid(): float
+    {
+        return (float) $this->payments()->sum('amount_gross');
+    }
+
+    public function balance(): float
+    {
+        return round((float) $this->total_gross - $this->totalPaid(), 2);
+    }
 }

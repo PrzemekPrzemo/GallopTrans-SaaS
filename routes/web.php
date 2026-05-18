@@ -4,8 +4,12 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -13,7 +17,8 @@ Route::get('/', function () {
 })->name('home');
 
 // Publiczna oferta (token) - bez logowania
-Route::get('/q/{token}', [QuoteController::class, 'public'])->name('quotes.public');
+Route::get('/q/{token}',     [QuoteController::class, 'public'])->name('quotes.public');
+Route::get('/q/{token}/pdf', [QuoteController::class, 'publicPdf'])->name('quotes.public.pdf');
 
 // Onboarding (po rejestracji) - tu user JESZCZE nie ma organization
 Route::middleware('auth')->group(function () {
@@ -54,10 +59,25 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
 
         // Oferty
         Route::prefix('quotes')->name('quotes.')->group(function () {
-            Route::get('/',          [QuoteController::class, 'index'])->name('index');
-            Route::get('/{quote}',   [QuoteController::class, 'show'])->name('show');
-            Route::delete('/{quote}',[QuoteController::class, 'destroy'])->name('destroy');
+            Route::get('/',             [QuoteController::class, 'index'])->name('index');
+            Route::get('/{quote}',      [QuoteController::class, 'show'])->name('show');
+            Route::get('/{quote}/pdf',  [QuoteController::class, 'pdf'])->name('pdf');
+            Route::post('/{quote}/send', [QuoteController::class, 'send'])->name('send');
+            Route::post('/{quote}/payments', [PaymentController::class, 'store'])->name('payments.store');
+            Route::delete('/{quote}',   [QuoteController::class, 'destroy'])->name('destroy');
         });
+        Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+
+        // Raporty miesięczne
+        Route::get('/reports',         [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/{year}/{month}', [ReportController::class, 'month'])->name('reports.month');
+
+        // Pojazdy
+        Route::resource('vehicles', VehicleController::class)->except('show');
+
+        // Ustawienia (per-group form)
+        Route::get('/settings',          [SettingsController::class, 'edit'])->name('settings.edit');
+        Route::post('/settings',         [SettingsController::class, 'update'])->name('settings.update');
 
     });
 });

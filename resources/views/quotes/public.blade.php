@@ -48,6 +48,11 @@
             </table>
         </div>
 
+        <div class="text-center">
+            <a href="{{ route('quotes.public.pdf', $quote->public_token) }}"
+               class="inline-block px-5 py-2 bg-indigo-600 text-white rounded font-medium">Pobierz ofertę (PDF)</a>
+        </div>
+
         <div class="text-center text-xs text-gray-500">Dziękujemy za zaufanie — {{ $quote->organization->name }}</div>
     </div>
 </body>

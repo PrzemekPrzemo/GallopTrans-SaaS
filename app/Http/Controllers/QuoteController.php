@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Mail\QuoteSentMail;
 use App\Models\Quote;
+use App\Services\PdfService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class QuoteController extends Controller
 {
@@ -35,5 +38,37 @@ class QuoteController extends Controller
             ->firstOrFail();
         $quote->load('items', 'organization');
         return view('quotes.public', compact('quote'));
+    }
+
+    public function pdf(Quote $quote)
+    {
+        $quote->load('items', 'organization');
+        return PdfService::stream($quote);
+    }
+
+    public function send(Request $request, Quote $quote)
+    {
+        $data = $request->validate([
+            'to'      => ['required', 'email'],
+            'message' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        Mail::to($data['to'])->send(new QuoteSentMail($quote, $data['message'] ?? null));
+
+        $quote->update([
+            'status' => $quote->status === 'draft' ? 'sent' : $quote->status,
+            'sent_at' => now(),
+        ]);
+
+        return back()->with('success', "Oferta wysłana do {$data['to']}.");
+    }
+
+    public function publicPdf(string $token)
+    {
+        $quote = Quote::withoutGlobalScopes()
+            ->where('public_token', $token)
+            ->firstOrFail();
+        $quote->load('items', 'organization');
+        return PdfService::download($quote);
     }
 }
