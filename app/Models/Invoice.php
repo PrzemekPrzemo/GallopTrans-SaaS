@@ -21,6 +21,8 @@ class Invoice extends Model
         'total_gross'         => 'float',
         'vat_percent'         => 'float',
         'ksef_response'       => 'array',
+        'advance_invoice_ids' => 'array',
+        'settled_from_advances' => 'float',
         'issued_at'           => 'date',
         'sold_at'             => 'date',
         'payment_due_at'      => 'date',

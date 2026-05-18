@@ -76,6 +76,35 @@ class InvoiceController extends Controller
         return Storage::disk('local')->download($invoice->upo_path, "UPO-{$invoice->number}.pdf");
     }
 
+    /** Wystaw fakturę zaliczkową. */
+    public function storeAdvance(Request $request, Quote $quote)
+    {
+        $data = $request->validate([
+            'amount_gross' => ['required', 'numeric', 'min:0.01'],
+            'note'         => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $invoice = InvoiceService::advance($quote, (float) $data['amount_gross'], $data['note'] ?? null);
+            return redirect()->route('invoices.show', $invoice)
+                ->with('success', "Faktura zaliczkowa {$invoice->number} wystawiona.");
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /** Wystaw fakturę końcową (rozlicza zaliczki). */
+    public function storeFinal(Quote $quote)
+    {
+        try {
+            $invoice = InvoiceService::finalSettlement($quote);
+            return redirect()->route('invoices.show', $invoice)
+                ->with('success', "Faktura końcowa {$invoice->number} wystawiona.");
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function correct(Request $request, Invoice $invoice)
     {
         $data = $request->validate([

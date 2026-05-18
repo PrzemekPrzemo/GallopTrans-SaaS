@@ -13,7 +13,7 @@ final class InquiryService
     /** @param array<string,mixed> $data */
     public static function create(Organization $org, array $data, ?string $ip = null, ?string $ua = null): Inquiry
     {
-        return Inquiry::withoutGlobalScopes()->create([
+        $inquiry = Inquiry::withoutGlobalScopes()->create([
             'organization_id' => $org->id,
             'token'           => Str::random(32),
             'client_name'     => $data['client_name'],
@@ -29,5 +29,15 @@ final class InquiryService
             'ip'              => $ip,
             'user_agent'      => $ua ? substr($ua, 0, 255) : null,
         ]);
+
+        NotificationService::notifyOrg(
+            $org->id, ['owner', 'admin', 'operator'],
+            'inquiry.new',
+            'Nowe zapytanie ofertowe',
+            sprintf('%s · %s → %s', $data['client_name'], $data['from_address'], $data['to_address']),
+            route('inquiries.index'),
+        );
+
+        return $inquiry;
     }
 }

@@ -1,5 +1,13 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Raport: {{ $start->translatedFormat('LLLL Y') }}</h2></x-slot>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800">Raport: {{ $start->translatedFormat('LLLL Y') }}</h2>
+            <div class="flex gap-2 text-sm">
+                <a href="{{ route('reports.export', [$start->year, $start->month, 'csv']) }}" class="px-3 py-1.5 bg-white border rounded hover:bg-gray-50">📥 CSV</a>
+                <a href="{{ route('reports.export', [$start->year, $start->month, 'pdf']) }}" class="px-3 py-1.5 bg-white border rounded hover:bg-gray-50">📄 PDF</a>
+            </div>
+        </div>
+    </x-slot>
 
     <div class="py-6">
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
