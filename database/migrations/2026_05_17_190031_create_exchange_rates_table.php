@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('exchange_rates', function (Blueprint $table) {
+            $table->id();
+            $table->char('code', 3);
+            $table->decimal('rate', 10, 4);
+            $table->string('source', 50)->default('nbp');
+            $table->date('valid_for_date');
+            $table->timestamp('fetched_at')->useCurrent();
+
+            $table->unique(['code', 'valid_for_date', 'source'], 'er_unique');
+            $table->index('valid_for_date');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('exchange_rates');
+    }
+};
