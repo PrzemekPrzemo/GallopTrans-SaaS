@@ -105,6 +105,14 @@ class QuoteController extends Controller
             'accepted_at' => now(),
         ]);
 
+        \App\Services\NotificationService::notifyOrg(
+            $quote->organization_id, ['owner', 'admin', 'operator'],
+            'quote.accepted',
+            "Klient zaakceptował ofertę {$quote->number}",
+            sprintf('%s · %s %s brutto', $quote->client_name, number_format((float) $quote->total_gross, 2, ',', ' '), $quote->currency),
+            route('quotes.show', $quote->id),
+        );
+
         return back()->with('success', 'Dziękujemy! Oferta zaakceptowana. Skontaktujemy się w sprawie szczegółów transportu.');
     }
 }

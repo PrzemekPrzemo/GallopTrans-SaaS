@@ -56,8 +56,26 @@
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <!-- Bell notifications + Settings Dropdown -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6 gap-3">
+
+                {{-- Bell — polluje endpoint co 60s żeby pokazać unread + lista 10 ostatnich --}}
+                <div id="gt-bell" class="relative" style="display:none;">
+                    <button id="gt-bell-btn" class="relative p-2 rounded-full hover:bg-gray-100" title="Powiadomienia">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span id="gt-bell-count" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">0</span>
+                    </button>
+                    <div id="gt-bell-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white shadow-lg rounded border z-50">
+                        <div class="px-4 py-2 border-b flex justify-between items-center text-sm">
+                            <strong>Powiadomienia</strong>
+                            <button id="gt-bell-mark-all" class="text-xs text-indigo-600 hover:underline">Oznacz wszystkie jako przeczytane</button>
+                        </div>
+                        <div id="gt-bell-list" class="max-h-96 overflow-y-auto text-sm">
+                            <div class="px-4 py-6 text-center text-gray-500">Ładowanie…</div>
+                        </div>
+                    </div>
+                </div>
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
@@ -136,3 +154,59 @@
         </div>
     </div>
 </nav>
+
+@auth
+@if (Auth::user()->organization_id)
+<script>
+(function () {
+    const bell = document.getElementById('gt-bell');
+    const btn  = document.getElementById('gt-bell-btn');
+    const cnt  = document.getElementById('gt-bell-count');
+    const dd   = document.getElementById('gt-bell-dropdown');
+    const list = document.getElementById('gt-bell-list');
+    const mark = document.getElementById('gt-bell-mark-all');
+    if (!bell) return;
+    bell.style.display = '';
+
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    async function refresh() {
+        try {
+            const r = await fetch('{{ route('notifications.index') }}', { headers: { 'Accept': 'application/json' } });
+            const data = await r.json();
+            if (data.unread > 0) { cnt.textContent = data.unread; cnt.classList.remove('hidden'); }
+            else { cnt.classList.add('hidden'); }
+            list.innerHTML = '';
+            if (!data.items.length) {
+                list.innerHTML = '<div class="px-4 py-6 text-center text-gray-500">Brak powiadomień.</div>';
+                return;
+            }
+            for (const n of data.items) {
+                const row = document.createElement('a');
+                row.href = n.link || '#';
+                row.className = 'block px-4 py-2 border-b hover:bg-gray-50 ' + (n.read ? 'opacity-60' : 'bg-indigo-50');
+                row.innerHTML = '<div class="font-medium">' + (n.read ? '' : '• ') + escapeHtml(n.title) + '</div>' +
+                                (n.message ? '<div class="text-xs text-gray-600">' + escapeHtml(n.message) + '</div>' : '') +
+                                '<div class="text-xs text-gray-400">' + n.created_at + '</div>';
+                row.onclick = () => fetch('{{ url('/notifications') }}/' + n.id + '/read', { method:'POST', headers: { 'X-CSRF-TOKEN': csrf } });
+                list.appendChild(row);
+            }
+        } catch (e) { /* silent */ }
+    }
+
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    btn.onclick = (e) => { e.stopPropagation(); dd.classList.toggle('hidden'); if (!dd.classList.contains('hidden')) refresh(); };
+    document.addEventListener('click', (e) => { if (!bell.contains(e.target)) dd.classList.add('hidden'); });
+    mark.onclick = async (e) => {
+        e.stopPropagation();
+        await fetch('{{ url('/notifications') }}/0/read', { method:'POST', headers: { 'X-CSRF-TOKEN': csrf } });
+        refresh();
+    };
+
+    refresh();
+    setInterval(refresh, 60000);
+})();
+</script>
+@endif
+@endauth

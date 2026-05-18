@@ -43,6 +43,14 @@ final class PaymentService
                 $quote->update(['status' => 'accepted', 'accepted_at' => $quote->accepted_at ?? now()]);
             }
 
+            NotificationService::notifyOrg(
+                $quote->organization_id, ['owner', 'admin'],
+                'payment.received',
+                "Wpłata {$payment->amount_gross} {$quote->currency} do oferty {$quote->number}",
+                $payment->note,
+                route('quotes.show', $quote->id),
+            );
+
             return $payment;
         });
     }
