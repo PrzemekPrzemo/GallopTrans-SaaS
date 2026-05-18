@@ -37,4 +37,14 @@ class Invoice extends Model
     {
         return $this->belongsTo(Quote::class);
     }
+
+    public function correctedBy(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Invoice::class, 'corrects_invoice_id');
+    }
+
+    public function correctsInvoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class, 'corrects_invoice_id');
+    }
 }

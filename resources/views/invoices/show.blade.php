@@ -83,6 +83,50 @@
                     </details>
                 @endif
             </div>
+
+            {{-- Korekta --}}
+            @if ($invoice->type === 'invoice')
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="font-medium mb-2">Faktura korygująca</div>
+
+                    @if ($invoice->correctedBy->isNotEmpty())
+                        <div class="text-sm text-gray-700 mb-2">
+                            Już wystawione korekty:
+                            @foreach ($invoice->correctedBy as $c)
+                                <a href="{{ route('invoices.show', $c) }}" class="text-indigo-600 font-mono mx-1">{{ $c->number }}</a>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <details>
+                        <summary class="cursor-pointer text-sm text-indigo-600">+ Wystaw korektę</summary>
+                        <form method="POST" action="{{ route('invoices.correct', $invoice) }}" class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            @csrf
+                            <label class="col-span-2">Powód korekty *
+                                <input name="reason" required class="mt-1 w-full rounded border-gray-300" placeholder="np. zmiana kwoty po reklamacji">
+                            </label>
+                            <label>Nowa kwota netto
+                                <input name="subtotal_net" type="number" step="0.01" value="{{ $invoice->subtotal_net }}" class="mt-1 w-full rounded border-gray-300">
+                            </label>
+                            <label>Nowa kwota brutto
+                                <input name="total_gross" type="number" step="0.01" value="{{ $invoice->total_gross }}" class="mt-1 w-full rounded border-gray-300">
+                            </label>
+                            <label class="col-span-2">Notatki
+                                <textarea name="notes" rows="2" class="mt-1 w-full rounded border-gray-300"></textarea>
+                            </label>
+                            <button class="col-span-2 px-4 py-2 bg-emerald-600 text-white rounded">Wystaw fakturę korygującą</button>
+                        </form>
+                    </details>
+                </div>
+            @else
+                <div class="bg-amber-50 border border-amber-200 rounded p-4 text-sm">
+                    To jest <strong>faktura korygująca</strong> do faktury
+                    @if ($invoice->correctsInvoice)
+                        <a href="{{ route('invoices.show', $invoice->correctsInvoice) }}" class="text-indigo-600 font-mono">{{ $invoice->correctsInvoice->number }}</a>
+                    @endif
+                    @if ($invoice->correction_reason) — powód: <em>{{ $invoice->correction_reason }}</em> @endif
+                </div>
+            @endif
         </div>
     </div>
 </x-app-layout>
