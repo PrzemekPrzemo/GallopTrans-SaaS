@@ -24,6 +24,7 @@ class Invoice extends Model
         'issued_at'           => 'date',
         'sold_at'             => 'date',
         'payment_due_at'      => 'date',
+        'last_reminder_at'    => 'datetime',
         'ksef_sent_at'        => 'datetime',
         'ksef_confirmed_at'   => 'datetime',
     ];

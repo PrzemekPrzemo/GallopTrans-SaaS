@@ -57,6 +57,25 @@ class InvoiceController extends Controller
         }
     }
 
+    /** Sprawdza status faktury w KSeF i pobiera UPO (PDF) jeśli zaakceptowana. */
+    public function fetchKsefStatus(Invoice $invoice)
+    {
+        try {
+            $ok = KsefService::fetchStatus($invoice);
+            return back()->with($ok ? 'success' : 'warning',
+                $ok ? 'UPO pobrane i zapisane.' : 'KSeF jeszcze nie potwierdził — spróbuj ponownie za chwilę.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Błąd: ' . $e->getMessage());
+        }
+    }
+
+    /** Pobieranie UPO (PDF z Urzędowym Poświadczeniem Otrzymania) z dysku. */
+    public function downloadUpo(Invoice $invoice)
+    {
+        abort_unless($invoice->upo_path && Storage::disk('local')->exists($invoice->upo_path), 404);
+        return Storage::disk('local')->download($invoice->upo_path, "UPO-{$invoice->number}.pdf");
+    }
+
     public function correct(Request $request, Invoice $invoice)
     {
         $data = $request->validate([

@@ -122,6 +122,8 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
         Route::get('/invoices/{invoice}',  [InvoiceController::class, 'show'])->name('invoices.show');
         Route::post('/quotes/{quote}/invoice', [InvoiceController::class, 'storeFromQuote'])->name('invoices.from-quote');
         Route::post('/invoices/{invoice}/ksef', [InvoiceController::class, 'sendToKsef'])->name('invoices.ksef-send');
+        Route::post('/invoices/{invoice}/ksef/status', [InvoiceController::class, 'fetchKsefStatus'])->name('invoices.ksef-status');
+        Route::get('/invoices/{invoice}/upo', [InvoiceController::class, 'downloadUpo'])->name('invoices.upo');
         Route::post('/invoices/{invoice}/correct', [InvoiceController::class, 'correct'])->name('invoices.correct');
 
         // Zespół (multi-user)
