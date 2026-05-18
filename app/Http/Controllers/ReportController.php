@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Quote;
+use App\Services\ReportExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -54,5 +56,17 @@ class ReportController extends Controller
         ];
 
         return view('reports.month', compact('start', 'quotes', 'payments', 'summary'));
+    }
+
+    public function export(int $year, int $month, string $format)
+    {
+        $start = Carbon::create($year, $month, 1)->startOfMonth();
+        $end = (clone $start)->endOfMonth();
+
+        return match ($format) {
+            'csv' => ReportExportService::csv($start, $end),
+            'pdf' => ReportExportService::pdf($start, $end),
+            default => abort(404, 'Nieobsługiwany format.'),
+        };
     }
 }
