@@ -13,40 +13,40 @@
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        Pulpit
+                        {{ __('Pulpit') }}
                     </x-nav-link>
                     <x-nav-link :href="route('calculator.index')" :active="request()->routeIs('calculator.*')">
-                        Kalkulator
+                        {{ __('Kalkulator') }}
                     </x-nav-link>
                     <x-nav-link :href="route('quotes.index')" :active="request()->routeIs('quotes.*')">
-                        Oferty
+                        {{ __('Oferty') }}
                     </x-nav-link>
                     <x-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')">
-                        Faktury
+                        {{ __('Faktury') }}
                     </x-nav-link>
                     <x-nav-link :href="route('inquiries.index')" :active="request()->routeIs('inquiries.*')">
-                        Zapytania
+                        {{ __('Zapytania') }}
                     </x-nav-link>
                     <x-nav-link :href="route('driver.dashboard')" :active="request()->routeIs('driver.*')">
-                        Moje trasy
+                        {{ __('Moje trasy') }}
                     </x-nav-link>
                     <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
-                        Raporty
+                        {{ __('Raporty') }}
                     </x-nav-link>
                     <x-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
-                        Klienci
+                        {{ __('Klienci') }}
                     </x-nav-link>
                     <x-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">
-                        Pojazdy
+                        {{ __('Pojazdy') }}
                     </x-nav-link>
                     <x-nav-link :href="route('team.index')" :active="request()->routeIs('team.*')">
-                        Zespół
+                        {{ __('Zespół') }}
                     </x-nav-link>
                     <x-nav-link :href="route('settings.edit')" :active="request()->routeIs('settings.*')">
-                        Ustawienia
+                        {{ __('Ustawienia') }}
                     </x-nav-link>
                     <x-nav-link :href="route('billing.plans')" :active="request()->routeIs('billing.*')">
-                        Subskrypcja
+                        {{ __('Subskrypcja') }}
                     </x-nav-link>
                     @if (auth()->user()?->is_super_admin)
                         <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
@@ -56,19 +56,39 @@
                 </div>
             </div>
 
-            <!-- Bell notifications + Settings Dropdown -->
+            <!-- Locale switcher + Bell + Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-3">
+
+                @php
+                    $localeFlags = ['pl' => '🇵🇱', 'en' => '🇬🇧', 'de' => '🇩🇪'];
+                    $current = app()->getLocale();
+                @endphp
+                <div class="relative" x-data="{ open: false }">
+                    <button type="button" @click="open = !open" class="flex items-center px-2 py-1 text-sm rounded hover:bg-gray-100" title="{{ __('Język') }}">
+                        <span class="text-base">{{ $localeFlags[$current] ?? '🌐' }}</span>
+                        <span class="ml-1 uppercase text-xs text-gray-600">{{ $current }}</span>
+                    </button>
+                    <div x-show="open" @click.outside="open = false" x-cloak class="absolute right-0 mt-1 w-32 bg-white rounded shadow-lg border z-50 text-sm">
+                        @foreach (\App\Http\Middleware\SetLocale::SUPPORTED as $loc)
+                            <a href="{{ route('locale.switch', $loc) }}"
+                               class="flex items-center px-3 py-2 hover:bg-gray-50 {{ $loc === $current ? 'bg-indigo-50 font-medium' : '' }}">
+                                <span class="mr-2 text-base">{{ $localeFlags[$loc] }}</span>
+                                <span class="uppercase">{{ $loc }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
 
                 {{-- Bell — polluje endpoint co 60s żeby pokazać unread + lista 10 ostatnich --}}
                 <div id="gt-bell" class="relative" style="display:none;">
-                    <button id="gt-bell-btn" class="relative p-2 rounded-full hover:bg-gray-100" title="Powiadomienia">
+                    <button id="gt-bell-btn" class="relative p-2 rounded-full hover:bg-gray-100" title="{{ __('Powiadomienia') }}">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                         <span id="gt-bell-count" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">0</span>
                     </button>
                     <div id="gt-bell-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white shadow-lg rounded border z-50">
                         <div class="px-4 py-2 border-b flex justify-between items-center text-sm">
-                            <strong>Powiadomienia</strong>
-                            <button id="gt-bell-mark-all" class="text-xs text-indigo-600 hover:underline">Oznacz wszystkie jako przeczytane</button>
+                            <strong>{{ __('Powiadomienia') }}</strong>
+                            <button id="gt-bell-mark-all" class="text-xs text-indigo-600 hover:underline">{{ __('Oznacz wszystkie jako przeczytane') }}</button>
                         </div>
                         <div id="gt-bell-list" class="max-h-96 overflow-y-auto text-sm">
                             <div class="px-4 py-6 text-center text-gray-500">Ładowanie…</div>
@@ -101,7 +121,7 @@
                             <x-dropdown-link :href="route('logout')"
                                     onclick="event.preventDefault();
                                                 this.closest('form').submit();">
-                                {{ __('Log Out') }}
+                                {{ __('Wyloguj') }}
                             </x-dropdown-link>
                         </form>
                     </x-slot>
@@ -147,7 +167,7 @@
                     <x-responsive-nav-link :href="route('logout')"
                             onclick="event.preventDefault();
                                         this.closest('form').submit();">
-                        {{ __('Log Out') }}
+                        {{ __('Wyloguj') }}
                     </x-responsive-nav-link>
                 </form>
             </div>

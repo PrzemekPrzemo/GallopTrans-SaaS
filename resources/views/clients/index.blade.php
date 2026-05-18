@@ -1,8 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800">Klienci</h2>
-            <a href="{{ route('clients.create') }}" class="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm">+ Dodaj klienta</a>
+            <h2 class="font-semibold text-xl text-gray-800">{{ __('Klienci') }}</h2>
+            <a href="{{ route('clients.create') }}" class="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm">{{ __('+ Dodaj klienta') }}</a>
         </div>
     </x-slot>
 
@@ -13,7 +13,7 @@
             <div class="bg-white shadow-sm rounded-lg overflow-hidden">
                 @if ($clients->isEmpty())
                     <div class="px-5 py-8 text-center text-gray-500">
-                        Brak klientów. Pojawią się tu automatycznie po zapisaniu pierwszej wyceny.
+                        {{ __('Brak klientów. Pojawią się tu automatycznie po zapisaniu pierwszej wyceny.') }}
                     </div>
                 @else
                     <table class="w-full text-sm">
