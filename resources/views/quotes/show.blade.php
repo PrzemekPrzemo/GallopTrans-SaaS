@@ -2,12 +2,20 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800">Oferta {{ $quote->number }}</h2>
-            <a href="{{ route('quotes.index') }}" class="text-sm text-gray-600">← Powrót</a>
+            <div class="flex gap-2">
+                <a href="{{ route('quotes.pdf', $quote) }}" target="_blank"
+                   class="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50">📄 PDF</a>
+                <a href="{{ route('quotes.index') }}" class="px-3 py-1.5 text-sm text-gray-600">← Powrót</a>
+            </div>
         </div>
     </x-slot>
 
     <div class="py-6">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-4">
+
+            @if (session('success'))
+                <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded">{{ session('success') }}</div>
+            @endif
 
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <div class="flex justify-between items-start">
@@ -82,8 +90,72 @@
                 </table>
             </div>
 
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {{-- Wysyłka mailem --}}
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="font-medium mb-3">Wyślij ofertę mailem</div>
+                    <form method="POST" action="{{ route('quotes.send', $quote) }}" class="space-y-2">
+                        @csrf
+                        <input type="email" name="to" value="{{ $quote->client_email }}" required
+                               class="w-full rounded border-gray-300" placeholder="adres e-mail klienta">
+                        <textarea name="message" rows="3" class="w-full rounded border-gray-300"
+                                  placeholder="Treść maila (opcjonalnie)"></textarea>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Wyślij ofertę (PDF w załączniku)</button>
+                    </form>
+                </div>
+
+                {{-- Płatności --}}
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="font-medium mb-1">Wpłaty</div>
+                    @php
+                        $paid = $quote->totalPaid();
+                        $balance = $quote->balance();
+                    @endphp
+                    <div class="text-sm text-gray-600 mb-3">
+                        Zapłacono: <strong>{{ number_format($paid, 2, ',', ' ') }} {{ $quote->currency }}</strong> ·
+                        Pozostało: <strong class="{{ $balance > 0 ? 'text-amber-700' : 'text-green-700' }}">{{ number_format($balance, 2, ',', ' ') }} {{ $quote->currency }}</strong>
+                    </div>
+
+                    @if ($quote->payments->count() > 0)
+                        <ul class="text-sm border-t border-gray-100 mb-3">
+                            @foreach ($quote->payments as $p)
+                                <li class="flex justify-between py-1 border-b border-gray-50">
+                                    <span>{{ $p->paid_at->format('Y-m-d') }} · {{ $p->payment_type }} · {{ $p->payment_method }}</span>
+                                    <span class="font-mono">{{ number_format((float) $p->amount_gross, 2, ',', ' ') }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <form method="POST" action="{{ route('quotes.payments.store', $quote) }}" class="grid grid-cols-2 gap-2 text-sm">
+                        @csrf
+                        <input type="number" step="0.01" name="amount_gross" required placeholder="Kwota brutto"
+                               class="rounded border-gray-300 col-span-2" value="{{ $balance > 0 ? $balance : '' }}">
+                        <input type="date" name="paid_at" required value="{{ now()->toDateString() }}"
+                               class="rounded border-gray-300">
+                        <select name="payment_type" class="rounded border-gray-300">
+                            <option value="full">pełna</option>
+                            <option value="advance">zaliczka</option>
+                            <option value="final">końcowa</option>
+                            <option value="other">inna</option>
+                        </select>
+                        <select name="payment_method" class="rounded border-gray-300 col-span-2">
+                            <option value="transfer">przelew</option>
+                            <option value="cash">gotówka</option>
+                            <option value="card">karta</option>
+                            <option value="other">inne</option>
+                        </select>
+                        <input type="text" name="reference" placeholder="Nr referencyjny / faktura"
+                               class="rounded border-gray-300 col-span-2">
+                        <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white rounded col-span-2">+ Dodaj wpłatę</button>
+                    </form>
+                </div>
+            </div>
+
             <div class="bg-white rounded-lg shadow-sm p-6 text-sm text-gray-600">
-                Link publiczny dla klienta: <a class="text-indigo-600 break-all" href="{{ route('quotes.public', $quote->public_token) }}">{{ route('quotes.public', $quote->public_token) }}</a>
+                Link publiczny dla klienta:
+                <a class="text-indigo-600 break-all" href="{{ route('quotes.public', $quote->public_token) }}">{{ route('quotes.public', $quote->public_token) }}</a>
             </div>
         </div>
     </div>

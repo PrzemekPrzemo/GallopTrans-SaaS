@@ -76,6 +76,11 @@ class OnboardingController extends Controller
             ['key' => 'toll_hgv_threshold_kg','value' => '3500',  'type' => 'int',    'group' => 'routing', 'label' => 'Próg HGV (kg)'],
             ['key' => 'toll_rate_light',      'value' => '0.20',  'type' => 'float',  'group' => 'routing', 'label' => 'Stawka opłat / km (lekki)'],
             ['key' => 'toll_rate_hgv',        'value' => '0.55',  'type' => 'float',  'group' => 'routing', 'label' => 'Stawka opłat / km (HGV)'],
+
+            ['key' => 'hero_title',     'value' => 'Profesjonalny transport koni',                                          'type' => 'string', 'group' => 'public_website', 'label' => 'Hero — nagłówek'],
+            ['key' => 'hero_subtitle',  'value' => 'Bezpieczny, komfortowy transport koni w Polsce i Europie. Wyceń trasę online.', 'type' => 'string', 'group' => 'public_website', 'label' => 'Hero — opis'],
+            ['key' => 'services_text',  'value' => '',                                                                       'type' => 'string', 'group' => 'public_website', 'label' => 'Sekcja "O nas / Usługi"'],
+            ['key' => 'contact_text',   'value' => '',                                                                       'type' => 'string', 'group' => 'public_website', 'label' => 'Sekcja kontakt'],
         ];
 
         foreach ($defaults as $row) {

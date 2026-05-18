@@ -21,6 +21,21 @@
                     <x-nav-link :href="route('quotes.index')" :active="request()->routeIs('quotes.*')">
                         Oferty
                     </x-nav-link>
+                    <x-nav-link :href="route('inquiries.index')" :active="request()->routeIs('inquiries.*')">
+                        Zapytania
+                    </x-nav-link>
+                    <x-nav-link :href="route('driver.dashboard')" :active="request()->routeIs('driver.*')">
+                        Moje trasy
+                    </x-nav-link>
+                    <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
+                        Raporty
+                    </x-nav-link>
+                    <x-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">
+                        Pojazdy
+                    </x-nav-link>
+                    <x-nav-link :href="route('settings.edit')" :active="request()->routeIs('settings.*')">
+                        Ustawienia
+                    </x-nav-link>
                     <x-nav-link :href="route('billing.plans')" :active="request()->routeIs('billing.*')">
                         Subskrypcja
                     </x-nav-link>

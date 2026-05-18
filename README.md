@@ -7,68 +7,79 @@ Multi-tenantowa wersja kalkulatora tras i ofertowania transportu koni
 
 - **Laravel 11** + PHP 8.2+
 - **MySQL 8** (multi-tenant: shared DB + `organization_id` w każdej tabeli)
-- **Laravel Breeze** — auth (login/register/profil)
-- **Laravel Cashier (Stripe)** — billing per-organizacja, 14 dni trialu
+- **Laravel Breeze** (auth) + **Laravel Cashier (Stripe)** (billing per-organizacja)
 - **Tailwind CSS** + Blade + Vite
 - **Leaflet.js** + **Openrouteservice** — mapy i routing pojazdów ciężarowych (HGV)
+- **DomPDF** — generowanie PDF ofert
 - **NBP API** — kurs EUR/PLN
 
-## Architektura multi-tenancy
+## Co działa
 
-- Model `Organization` to root tenanta. Każdy zarejestrowany user przechodzi
-  onboarding → utworzenie organizacji → przyznanie roli `owner`.
-- Każda tabela biznesowa (`vehicles`, `quotes`, `settings`, …) ma
-  `organization_id` z FK + indeksem.
-- Modele używają trait `App\Concerns\BelongsToOrganization`, który:
-  - rejestruje `OrganizationScope` (globalny filtr po org_id zalogowanego usera)
-  - automatycznie wypełnia `organization_id` przy `creating`.
-- Middleware `SetTenantContext` (web, append) wstrzykuje `tenant.id` do
-  kontenera — dzięki temu nawet poza pętlą `auth()` (np. seedery z imitacją usera)
-  scope działa.
-- `EnsureOrganization` middleware kieruje user'a bez `organization_id` do `/onboarding`.
-- `EnsureSubscribed` blokuje dostęp do kalkulatora/ofert dla orgów po wygasłym trialu
-  i bez aktywnej subskrypcji (redirect do `/billing/plans`).
+### Multi-tenancy
+- `Organization` = root tenanta. User po rejestracji przechodzi `/onboarding`
+  → tworzy się Organization → user dostaje rolę `owner` + 14 dni trialu.
+- Każda tabela biznesowa ma `organization_id` (FK + index).
+- Trait `BelongsToOrganization` + `OrganizationScope` automatycznie filtruje
+  SELECT i wypełnia FK na save.
+- Middleware: `SetTenantContext`, `EnsureOrganization`, `EnsureSubscribed`.
+- Cashier `Billable` na `Organization` — subskrypcja jest **per-firma**
+  (jeden plan obsługuje wielu userów z firmy).
 
-Cashier `Billable` jest na `Organization` (a nie `User`), więc subskrypcja
-jest **per-firma** — wielu użytkowników z jednej firmy mieści się w jednym planie.
+### Kalkulator i oferty
+- Autocomplete adresów (Pelias), mapa Leaflet z trasą GeoJSON z ORS.
+- Restrykcje pojazdu HGV (waga, wysokość, długość, osie) — bezpieczne dla 7.5t+.
+- Automatyczne oszacowanie opłat drogowych (e-TOLL dla >3.5t).
+- Live preview wyceny, zapis jako oferta z numeracją `OF/RRRR/MM/NNNN`
+  per-organizacja (lock-for-update na sekwencji).
+- Wszystkie trzy tryby trasy: jednorazowo / w obie strony / tam + powrót bezpośredni.
+- PLN i EUR (przez kurs NBP).
 
-## Migracja z TransportKoni-Kalkulator
+### PDF + email
+- Generowanie PDF ofert (DomPDF) — pobranie dla pracownika i klienta.
+- Wysyłka oferty mailem z PDF w załączniku + Markdown HTML body.
+- Auto-status `sent` po wysłaniu maila.
 
-Kod źródłowy z `transportkoni-kalkulator` (PHP vanilla + raw PDO + MySQL) został
-**portowany 1:1 logicznie**, ale przepisany do Laravel:
+### Płatności i raporty
+- Rejestrowanie wpłat (brutto → automatyczne netto i VAT na podstawie VAT % oferty).
+- Auto-status `accepted` na ofercie po pełnej zapłacie.
+- Saldo per oferta, lista wpłat, ostatnie 12 m-cy w raportach + drill-down do miesiąca.
 
-| Oryginał (PHP vanilla)                       | SaaS (Laravel)                                      |
-|----------------------------------------------|-----------------------------------------------------|
-| `src/Services/CalculatorService.php`         | `app/Services/CalculatorService.php` (identyczna logika, testy w `tests/Unit`) |
-| `src/Services/OrsService.php` (cURL)         | `app/Services/OrsService.php` (Laravel `Http`)      |
-| `src/Services/NbpService.php`                | `app/Services/NbpService.php` + Eloquent            |
-| `src/Services/SettingsService.php`           | `app/Services/SettingsService.php` (tenant-scoped, cache 5 min) |
-| `src/Services/QuoteService.php`              | `app/Services/QuoteService.php` + `QuoteNumberGenerator` (per-org sekwencja) |
-| `src/Controllers/CalculatorController.php`   | `app/Http/Controllers/CalculatorController.php`     |
-| `database/schema.sql`                        | `database/migrations/2026_05_17_19000*.php`         |
-| `views/calculator/index.php`                 | `resources/views/calculator/index.blade.php`        |
+### Publiczne API i widget
+- `POST /api/o/{slug}/inquiry` — zapytania ofertowe z zewnętrznych WWW (CORS, rate-limit 10/h/IP, honeypot).
+- `/widget.js?org={slug}` — gotowy do osadzenia JS-snippet generujący formularz zapytania.
+- `/o/{slug}` — publiczna strona firmowa per-tenant z treściami CMS.
+- Moduł `Zapytania ofertowe`: lista, zmiana statusu, jednym kliknięciem `→ Wyceń`
+  (prefill kalkulatora danymi z zapytania).
 
-**Co już działa (MVP):**
-- Kalkulator: autocomplete (Pelias), mapa z trasą (Leaflet + ORS GeoJSON),
-  live preview wyceny, oszacowanie opłat drogowych dla HGV, zapis jako oferta
-  z numerem `OF/RRRR/MM/NNNN` per-organizacja.
-- Onboarding: rejestracja → utworzenie organizacji + seed domyślnych settings
-  i pojazdu + 14-dniowy trial.
-- Stripe: pricing page z 3 planami (Starter/Pro/Business), Checkout,
-  portal klienta, webhook (`/stripe/webhook`).
-- Dashboard, lista ofert, widok pojedynczej oferty + publiczny link
-  `/q/{token}` dla klienta końcowego.
+### Panel kierowcy
+- `/my-trips` — lista nadchodzących i historycznych tras (przypisanych jako driver lub created_by).
+- iCal feed `/calendar/{token}.ics` — subskrypcja w Google/Apple/Outlook calendar.
 
-**Co dorzucamy w kolejnych iteracjach (TODO):**
-- Generowanie PDF ofert (`barryvdh/laravel-dompdf` już zainstalowany).
-- Wysyłka maila do klienta + e-mail z linkiem do publicznej akceptacji.
-- Płatności: zaliczki/saldo per oferta, raporty miesięczne, marża.
-- Zapytania ofertowe: publiczne API `POST /api/inquiry` + widget HTML+JS
-  do osadzenia na WWW klienta.
-- Panel kierowcy + iCal feed.
-- CMS publicznej WWW (per-tenant).
-- Klienci, pojazdy, ustawienia — pełne UI CRUD (na razie tylko seedy +
-  edycja parametrów w samym kalkulatorze).
+### CRUD i ustawienia
+- Pojazdy: pełny resource controller + form (waga, wysokość, osie, etc.).
+- Ustawienia: dane firmy + wszystkie parametry settings pogrupowane (pricing/routing/quotes/mail/public_website) + klucz ORS per-tenant.
+- CMS publicznej strony (hero, subtitle, services, contact) edytowalny z poziomu UI.
+
+### Publiczna strona oferty
+- `/q/{token}` — link dla klienta końcowego (bez logowania).
+- `/q/{token}/pdf` — bezpośrednie pobranie PDF.
+
+## Testy
+
+```bash
+php artisan test
+```
+
+**39 testów zielonych** pokrywających:
+- `CalculatorServiceTest` (5) — parity logiki wyceny z aplikacją źródłową (one-way, round-trip,
+  min amount, EUR, dopłaty za konie).
+- `QuoteBalanceTest` (2) — netto/VAT z brutto, auto-status po pełnej zapłacie.
+- `MultiTenancyTest` (3) — izolacja danych między orgami, auto-fill `organization_id`,
+  redirect bez orgu do onboardingu.
+- `PublicInquiryApiTest` (4) — tenant scoping, walidacja, 404 dla nieznanego slug, honeypot.
+- Breeze auth (25) — login, register, password reset, profile update, email verification.
+
+CI uruchamia testy automatycznie na każdy PR (`.github/workflows/tests.yml`).
 
 ## Uruchomienie lokalne
 
@@ -82,7 +93,7 @@ php artisan migrate
 php artisan serve
 ```
 
-Wymagane rozszerzenia PHP: `pdo_mysql`, `bcmath`, `curl`, `mbstring`, `json`.
+Wymagane rozszerzenia PHP: `pdo_mysql`, `bcmath`, `curl`, `mbstring`, `json`, `intl`.
 
 ## Stripe — konfiguracja
 
@@ -100,14 +111,24 @@ Wymagane rozszerzenia PHP: `pdo_mysql`, `bcmath`, `curl`, `mbstring`, `json`.
 3. Klucz wpisz w `.env` jako `ORS_API_KEY` *lub* w panelu ustawień organizacji
    (per-tenant) — wartość z bazy ma pierwszeństwo nad ENV.
 
-## Testy
+## Mapa migracji z TransportKoni-Kalkulator
 
-```bash
-php artisan test
-```
-
-`CalculatorServiceTest` weryfikuje że logika wyceny w SaaS daje identyczne
-wyniki jak w aplikacji źródłowej (`transportkoni-kalkulator`).
+| Oryginał (PHP vanilla)                       | SaaS (Laravel)                                      |
+|----------------------------------------------|-----------------------------------------------------|
+| `src/Services/CalculatorService.php`         | `app/Services/CalculatorService.php`                |
+| `src/Services/OrsService.php` (cURL)         | `app/Services/OrsService.php` (Laravel `Http`)      |
+| `src/Services/NbpService.php`                | `app/Services/NbpService.php` + Eloquent            |
+| `src/Services/SettingsService.php`           | `app/Services/SettingsService.php` (tenant-scoped, cache 5 min) |
+| `src/Services/QuoteService.php`              | `app/Services/QuoteService.php` + `QuoteNumberGenerator` |
+| `src/Services/PdfService.php` (mPDF)         | `app/Services/PdfService.php` (DomPDF)              |
+| `src/Services/CalendarService.php`           | `app/Services/CalendarService.php`                  |
+| `src/Services/InquiryService.php`            | `app/Services/InquiryService.php`                   |
+| `src/Services/PaymentService.php`            | `app/Services/PaymentService.php`                   |
+| `src/Controllers/CalculatorController.php`   | `app/Http/Controllers/CalculatorController.php`     |
+| `database/schema.sql`                        | `database/migrations/2026_05_17_19*.php`            |
+| `views/calculator/index.php`                 | `resources/views/calculator/index.blade.php`        |
+| `views/calculator/pdf/*.php`                 | `resources/views/quotes/pdf.blade.php`              |
+| `views/public/page.php`                      | `resources/views/public/page.blade.php`             |
 
 ## Branch
 

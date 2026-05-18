@@ -6,10 +6,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $u) {
+            if (empty($u->calendar_token)) {
+                $u->calendar_token = Str::random(40);
+            }
+        });
+    }
 
     protected $fillable = [
         'organization_id',
@@ -19,6 +29,7 @@ class User extends Authenticatable
         'role',
         'phone',
         'locale',
+        'calendar_token',
         'is_active',
         'last_login_at',
     ];

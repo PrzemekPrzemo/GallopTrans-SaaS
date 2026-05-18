@@ -2,10 +2,18 @@
 
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalculatorController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DriverDashboardController;
+use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -13,7 +21,16 @@ Route::get('/', function () {
 })->name('home');
 
 // Publiczna oferta (token) - bez logowania
-Route::get('/q/{token}', [QuoteController::class, 'public'])->name('quotes.public');
+Route::get('/q/{token}',     [QuoteController::class, 'public'])->name('quotes.public');
+Route::get('/q/{token}/pdf', [QuoteController::class, 'publicPdf'])->name('quotes.public.pdf');
+
+// Publiczna strona firmowa (per-tenant) + widget JS
+Route::get('/o/{slug}',  [PublicPageController::class, 'show'])->name('public.page');
+Route::post('/o/{slug}/inquiry', [PublicPageController::class, 'submitInquiry'])->name('public.page.inquiry');
+Route::get('/widget.js', [PublicPageController::class, 'widgetScript'])->name('public.widget');
+
+// iCal feed kierowcy (publiczny, autoryzowany tokenem w URL).
+Route::get('/calendar/{token}.ics', [CalendarController::class, 'feed'])->name('calendar.feed');
 
 // Onboarding (po rejestracji) - tu user JESZCZE nie ma organization
 Route::middleware('auth')->group(function () {
@@ -40,6 +57,9 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+        // Panel kierowcy (rola 'driver' lub każdy user — pokazuje swoje trasy)
+        Route::get('/my-trips', [DriverDashboardController::class, 'index'])->name('driver.dashboard');
+
         // Kalkulator tras
         Route::prefix('calculator')->name('calculator.')->group(function () {
             Route::get('/',                 [CalculatorController::class, 'index'])->name('index');
@@ -54,10 +74,30 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
 
         // Oferty
         Route::prefix('quotes')->name('quotes.')->group(function () {
-            Route::get('/',          [QuoteController::class, 'index'])->name('index');
-            Route::get('/{quote}',   [QuoteController::class, 'show'])->name('show');
-            Route::delete('/{quote}',[QuoteController::class, 'destroy'])->name('destroy');
+            Route::get('/',             [QuoteController::class, 'index'])->name('index');
+            Route::get('/{quote}',      [QuoteController::class, 'show'])->name('show');
+            Route::get('/{quote}/pdf',  [QuoteController::class, 'pdf'])->name('pdf');
+            Route::post('/{quote}/send', [QuoteController::class, 'send'])->name('send');
+            Route::post('/{quote}/payments', [PaymentController::class, 'store'])->name('payments.store');
+            Route::delete('/{quote}',   [QuoteController::class, 'destroy'])->name('destroy');
         });
+        Route::delete('/payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+
+        // Raporty miesięczne
+        Route::get('/reports',         [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/{year}/{month}', [ReportController::class, 'month'])->name('reports.month');
+
+        // Pojazdy
+        Route::resource('vehicles', VehicleController::class)->except('show');
+
+        // Ustawienia (per-group form)
+        Route::get('/settings',          [SettingsController::class, 'edit'])->name('settings.edit');
+        Route::post('/settings',         [SettingsController::class, 'update'])->name('settings.update');
+
+        // Zapytania ofertowe (od klientów z widgetu / publicznej strony)
+        Route::get('/inquiries',                [InquiryController::class, 'index'])->name('inquiries.index');
+        Route::patch('/inquiries/{inquiry}',    [InquiryController::class, 'updateStatus'])->name('inquiries.status');
+        Route::delete('/inquiries/{inquiry}',   [InquiryController::class, 'destroy'])->name('inquiries.destroy');
 
     });
 });
