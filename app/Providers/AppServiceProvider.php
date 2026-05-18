@@ -2,7 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\Invoice;
 use App\Models\Organization;
+use App\Models\Payment;
+use App\Models\Quote;
+use App\Models\Vehicle;
+use App\Observers\AuditObserver;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
@@ -24,5 +29,11 @@ class AppServiceProvider extends ServiceProvider
         // ta kolumna trzyma ID organizacji.
         Cashier::useCustomerModel(Organization::class);
         Cashier::calculateTaxes();
+
+        // Logowanie akcji CRUD do audit_log dla kluczowych modeli.
+        Quote::observe(AuditObserver::class);
+        Invoice::observe(AuditObserver::class);
+        Payment::observe(AuditObserver::class);
+        Vehicle::observe(AuditObserver::class);
     }
 }
