@@ -46,6 +46,11 @@ class Quote extends Model
         return $this->hasMany(QuoteItem::class);
     }
 
+    public function client(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);

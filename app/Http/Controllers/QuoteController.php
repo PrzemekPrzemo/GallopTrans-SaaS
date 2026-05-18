@@ -7,25 +7,39 @@ namespace App\Http\Controllers;
 use App\Mail\QuoteSentMail;
 use App\Models\Quote;
 use App\Services\PdfService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
 class QuoteController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index(Request $request)
     {
-        $quotes = Quote::orderByDesc('id')->paginate(20);
-        return view('quotes.index', compact('quotes'));
+        $query = Quote::query()->orderByDesc('id');
+
+        // Driver widzi tylko swoje trasy.
+        if ($request->user()->role === 'driver') {
+            $query->where(function ($q) use ($request) {
+                $q->where('driver_id', $request->user()->id)
+                  ->orWhere('created_by', $request->user()->id);
+            });
+        }
+
+        return view('quotes.index', ['quotes' => $query->paginate(20)]);
     }
 
     public function show(Quote $quote)
     {
+        $this->authorize('view', $quote);
         $quote->load('items', 'payments');
         return view('quotes.show', compact('quote'));
     }
 
     public function destroy(Quote $quote)
     {
+        $this->authorize('delete', $quote);
         $quote->delete();
         return redirect()->route('quotes.index')->with('success', 'Oferta usunięta.');
     }

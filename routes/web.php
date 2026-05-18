@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverDashboardController;
 use App\Http\Controllers\InquiryController;
@@ -99,6 +101,13 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
         // Pojazdy
         Route::resource('vehicles', VehicleController::class)->except('show');
 
+        // Klienci
+        Route::get('/clients/search', [ClientController::class, 'search'])->name('clients.search');
+        Route::resource('clients', ClientController::class);
+
+        // Audit log
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
         // Ustawienia (per-group form)
         Route::get('/settings',          [SettingsController::class, 'edit'])->name('settings.edit');
         Route::post('/settings',         [SettingsController::class, 'update'])->name('settings.update');
@@ -113,6 +122,7 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
         Route::get('/invoices/{invoice}',  [InvoiceController::class, 'show'])->name('invoices.show');
         Route::post('/quotes/{quote}/invoice', [InvoiceController::class, 'storeFromQuote'])->name('invoices.from-quote');
         Route::post('/invoices/{invoice}/ksef', [InvoiceController::class, 'sendToKsef'])->name('invoices.ksef-send');
+        Route::post('/invoices/{invoice}/correct', [InvoiceController::class, 'correct'])->name('invoices.correct');
 
         // Zespół (multi-user)
         Route::get('/team',                          [TeamController::class, 'index'])->name('team.index');

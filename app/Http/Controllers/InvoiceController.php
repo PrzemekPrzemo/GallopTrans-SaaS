@@ -9,6 +9,7 @@ use App\Models\Quote;
 use App\Services\InvoiceService;
 use App\Services\Ksef\KsefService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class InvoiceController extends Controller
 {
@@ -54,5 +55,21 @@ class InvoiceController extends Controller
         } catch (\Throwable $e) {
             return back()->with('error', 'Błąd KSeF: ' . $e->getMessage());
         }
+    }
+
+    public function correct(Request $request, Invoice $invoice)
+    {
+        $data = $request->validate([
+            'reason'       => ['required', 'string', 'max:255'],
+            'subtotal_net' => ['nullable', 'numeric'],
+            'vat_amount'   => ['nullable', 'numeric'],
+            'total_gross'  => ['nullable', 'numeric'],
+            'notes'        => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $correction = InvoiceService::correction($invoice, $data);
+
+        return redirect()->route('invoices.show', $correction)
+            ->with('success', "Faktura korygująca {$correction->number} wystawiona.");
     }
 }

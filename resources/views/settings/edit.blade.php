@@ -68,6 +68,18 @@
                 </div>
             </div>
 
+            @if (auth()->user()->canManage())
+                <div class="mt-4 bg-white shadow-sm rounded-lg p-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-medium text-gray-700 uppercase text-sm">Audit log</div>
+                            <div class="text-sm text-gray-600">Historia zmian i akcji w systemie (oferty, faktury, płatności, pojazdy).</div>
+                        </div>
+                        <a href="{{ route('audit.index') }}" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm">Otwórz audit log →</a>
+                    </div>
+                </div>
+            @endif
+
             <div class="mt-4 bg-white shadow-sm rounded-lg p-6">
                 <div class="font-medium mb-3 text-gray-700 uppercase text-sm">Twoja publiczna strona i widget WWW</div>
 

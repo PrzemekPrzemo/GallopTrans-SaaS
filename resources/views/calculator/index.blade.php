@@ -132,6 +132,16 @@
                 <div class="bg-white rounded-lg shadow-sm p-5 space-y-4">
                     <div class="font-medium">4. Klient (opcjonalne — wymagane do zapisu oferty)</div>
 
+                    <input id="client_id" type="hidden" value="">
+
+                    <div class="relative">
+                        <label class="text-sm block">Wyszukaj klienta w historii (lub wpisz nowego niżej)
+                            <input id="client_search" type="text" autocomplete="off" placeholder="zacznij wpisywać nazwę, firmę, e-mail lub NIP…"
+                                   class="mt-1 w-full rounded border-gray-300"/>
+                        </label>
+                        <div id="client_list" class="ac-list hidden"></div>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <label class="text-sm">Imię i nazwisko
                             <input id="client_name" type="text" value="{{ $prefill['client_name'] }}" class="mt-1 w-full rounded border-gray-300"/></label>
@@ -225,6 +235,44 @@
             fromMarker = L.marker([it.lat, it.lng], { title: 'Skąd' }).addTo(map);
             map.setView([it.lat, it.lng], 9);
         });
+        // ===== Autocomplete klientów z historii =====
+        (function () {
+            const input = $('client_search'), list = $('client_list');
+            let t = null;
+            input.addEventListener('input', () => {
+                clearTimeout(t);
+                const q = input.value.trim();
+                if (q.length < 2) { list.classList.add('hidden'); return; }
+                t = setTimeout(async () => {
+                    const r = await fetch(`{{ route('clients.search') }}?q=` + encodeURIComponent(q));
+                    const data = await r.json();
+                    list.innerHTML = '';
+                    if (!data.results || data.results.length === 0) { list.classList.add('hidden'); return; }
+                    for (const c of data.results) {
+                        const div = document.createElement('div');
+                        div.className = 'ac-item';
+                        div.innerHTML = `<div><strong>${c.name}</strong> ${c.company ? '· ' + c.company : ''}</div>
+                                         <div style="color:#666;font-size:.78em">${c.email || ''} ${c.phone ? '· ' + c.phone : ''} ${c.nip ? '· NIP ' + c.nip : ''}</div>`;
+                        div.onclick = () => {
+                            $('client_id').value = c.id;
+                            $('client_name').value = c.name || '';
+                            $('client_email').value = c.email || '';
+                            $('client_phone').value = c.phone || '';
+                            $('client_company').value = c.company || '';
+                            if (c.default_rate_per_km) $('base_rate_per_km').value = c.default_rate_per_km;
+                            if (c.default_min_amount)  $('min_quote_amount').value = c.default_min_amount;
+                            input.value = c.name;
+                            list.classList.add('hidden');
+                            recalc();
+                        };
+                        list.appendChild(div);
+                    }
+                    list.classList.remove('hidden');
+                }, 200);
+            });
+            input.addEventListener('blur', () => setTimeout(() => list.classList.add('hidden'), 200));
+        })();
+
         bindAutocomplete('to_address', 'to_list', (it) => {
             toPoint = { lat: it.lat, lng: it.lng };
             if (toMarker) map.removeLayer(toMarker);
@@ -331,6 +379,7 @@
                 vat_percent: Number($('vat_percent').value),
                 currency: '{{ $defaults['currency'] }}',
                 exchange_rate: {{ $defaults['exchange_rate'] }},
+                client_id: Number($('client_id').value) || null,
                 client_name: $('client_name').value,
                 client_email: $('client_email').value,
                 client_phone: $('client_phone').value,
