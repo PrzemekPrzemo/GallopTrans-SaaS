@@ -59,6 +59,16 @@
             </form>
 
             <div class="mt-8 bg-white shadow-sm rounded-lg p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-medium text-gray-700 uppercase text-sm">KSeF — e-faktury</div>
+                        <div class="text-sm text-gray-600">Konfiguracja wystawiania faktur w Krajowym Systemie e-Faktur.</div>
+                    </div>
+                    <a href="{{ route('settings.ksef') }}" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm">Konfiguruj KSeF →</a>
+                </div>
+            </div>
+
+            <div class="mt-4 bg-white shadow-sm rounded-lg p-6">
                 <div class="font-medium mb-3 text-gray-700 uppercase text-sm">Twoja publiczna strona i widget WWW</div>
 
                 <p class="text-sm text-gray-600">

@@ -71,4 +71,26 @@ class QuoteController extends Controller
         $quote->load('items', 'organization');
         return PdfService::download($quote);
     }
+
+    /** Publiczna akceptacja oferty przez klienta. Zmienia status na 'accepted'. */
+    public function publicAccept(Request $request, string $token)
+    {
+        $quote = Quote::withoutGlobalScopes()
+            ->where('public_token', $token)
+            ->firstOrFail();
+
+        if ($quote->status === 'accepted') {
+            return back()->with('warning', 'Oferta była już zaakceptowana.');
+        }
+        if (in_array($quote->status, ['rejected', 'expired', 'cancelled'], true)) {
+            return back()->with('error', 'Oferta nie jest już aktywna.');
+        }
+
+        $quote->update([
+            'status'      => 'accepted',
+            'accepted_at' => now(),
+        ]);
+
+        return back()->with('success', 'Dziękujemy! Oferta zaakceptowana. Skontaktujemy się w sprawie szczegółów transportu.');
+    }
 }

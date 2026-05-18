@@ -29,6 +29,12 @@ class Organization extends Model
         'timezone',
         'plan',
         'trial_ends_at',
+        'ksef_mode',
+        'ksef_identifier',
+        'ksef_cert_path',
+        'ksef_token_encrypted',
+        'invoice_number_format',
+        'invoice_payment_due_days',
     ];
 
     protected $casts = [
