@@ -13,7 +13,17 @@
                 <div class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded">{{ session('warning') }}</div>
             @endif
 
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            @if ($stats['overdue_count'] > 0)
+                <div class="bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded flex justify-between items-center">
+                    <div>
+                        <strong>⚠ {{ $stats['overdue_count'] }}</strong> {{ $stats['overdue_count'] == 1 ? 'zaległa faktura' : 'zaległych faktur' }}
+                        na łączną kwotę <strong>{{ number_format($stats['overdue_amount'], 2, ',', ' ') }} zł</strong>
+                    </div>
+                    <a href="{{ route('invoices.index') }}" class="text-sm font-medium underline">→ Zobacz faktury</a>
+                </div>
+            @endif
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white p-5 rounded-lg shadow-sm">
                     <div class="text-sm text-gray-500">Oferty (łącznie)</div>
                     <div class="text-3xl font-semibold mt-1">{{ $stats['quotes_total'] }}</div>
