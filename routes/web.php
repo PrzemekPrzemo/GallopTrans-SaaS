@@ -11,6 +11,7 @@ use App\Http\Controllers\DriverDashboardController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\KsefSettingsController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
@@ -97,6 +98,7 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
         // Raporty miesięczne
         Route::get('/reports',         [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/{year}/{month}', [ReportController::class, 'month'])->name('reports.month');
+        Route::get('/reports/{year}/{month}/export/{format}', [ReportController::class, 'export'])->name('reports.export')->whereIn('format', ['csv', 'pdf']);
 
         // Pojazdy
         Route::resource('vehicles', VehicleController::class)->except('show');
@@ -107,6 +109,10 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
 
         // Audit log
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
+        // Notyfikacje w-app (bell)
+        Route::get('/notifications',                 [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/{id}/read',      [NotificationController::class, 'markRead'])->name('notifications.read');
 
         // Ustawienia (per-group form)
         Route::get('/settings',          [SettingsController::class, 'edit'])->name('settings.edit');
@@ -120,7 +126,9 @@ Route::middleware(['auth', 'ensure.org'])->group(function () {
         // Faktury
         Route::get('/invoices',            [InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{invoice}',  [InvoiceController::class, 'show'])->name('invoices.show');
-        Route::post('/quotes/{quote}/invoice', [InvoiceController::class, 'storeFromQuote'])->name('invoices.from-quote');
+        Route::post('/quotes/{quote}/invoice',         [InvoiceController::class, 'storeFromQuote'])->name('invoices.from-quote');
+        Route::post('/quotes/{quote}/invoice/advance', [InvoiceController::class, 'storeAdvance'])->name('invoices.advance');
+        Route::post('/quotes/{quote}/invoice/final',   [InvoiceController::class, 'storeFinal'])->name('invoices.final');
         Route::post('/invoices/{invoice}/ksef', [InvoiceController::class, 'sendToKsef'])->name('invoices.ksef-send');
         Route::post('/invoices/{invoice}/ksef/status', [InvoiceController::class, 'fetchKsefStatus'])->name('invoices.ksef-status');
         Route::get('/invoices/{invoice}/upo', [InvoiceController::class, 'downloadUpo'])->name('invoices.upo');

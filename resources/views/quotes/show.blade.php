@@ -153,24 +153,71 @@
                 </div>
             </div>
 
-            {{-- Faktura — pokazujemy tylko gdy oferta zaakceptowana --}}
+            {{-- Faktury — tylko gdy oferta zaakceptowana --}}
             @if ($quote->status === 'accepted')
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="font-medium mb-2">Faktura VAT</div>
-                    @if ($quote->invoice)
-                        <div class="flex items-center justify-between">
-                            <div>
-                                Faktura <a class="text-indigo-600 font-mono" href="{{ route('invoices.show', $quote->invoice) }}">{{ $quote->invoice->number }}</a>
-                                · KSeF: <span class="text-xs px-2 py-0.5 rounded bg-gray-100">{{ $quote->invoice->ksef_status }}</span>
+                @php
+                    $invoices = \App\Models\Invoice::where('quote_id', $quote->id)->orderBy('id')->get();
+                    $advances = $invoices->where('invoice_subtype', 'advance');
+                    $final    = $invoices->firstWhere('invoice_subtype', 'final');
+                    $regular  = $invoices->firstWhere('invoice_subtype', 'regular');
+                    $settled  = (float) $advances->sum('total_gross');
+                    $remaining = round((float) $quote->total_gross - $settled, 2);
+                @endphp
+
+                <div class="bg-white rounded-lg shadow-sm p-6 space-y-4">
+                    <div class="font-medium">Faktury VAT</div>
+
+                    @if ($invoices->isNotEmpty())
+                        <ul class="text-sm divide-y">
+                            @foreach ($invoices as $inv)
+                                <li class="py-1.5 flex justify-between">
+                                    <span>
+                                        <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 mr-2">{{ $inv->invoice_subtype ?: 'regular' }}</span>
+                                        <a class="text-indigo-600 font-mono" href="{{ route('invoices.show', $inv) }}">{{ $inv->number }}</a>
+                                    </span>
+                                    <span>{{ number_format((float) $inv->total_gross, 2, ',', ' ') }} {{ $inv->currency }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+
+                        @if ($settled > 0)
+                            <div class="text-xs text-gray-600">
+                                Zaliczki łącznie: <strong>{{ number_format($settled, 2, ',', ' ') }} {{ $quote->currency }}</strong>
+                                · Pozostało do faktury końcowej: <strong>{{ number_format($remaining, 2, ',', ' ') }} {{ $quote->currency }}</strong>
                             </div>
-                            <a class="text-indigo-600 text-sm" href="{{ route('invoices.show', $quote->invoice) }}">→ Otwórz</a>
-                        </div>
-                    @else
-                        <form method="POST" action="{{ route('invoices.from-quote', $quote) }}" onsubmit="return confirm('Wystawić fakturę z tej oferty?')">
-                            @csrf
-                            <button class="px-4 py-2 bg-emerald-600 text-white rounded">Wystaw fakturę</button>
-                        </form>
+                        @endif
                     @endif
+
+                    <div class="flex flex-wrap gap-2 pt-2">
+                        @if (! $regular && $advances->isEmpty())
+                            <form method="POST" action="{{ route('invoices.from-quote', $quote) }}" onsubmit="return confirm('Wystawić zwykłą fakturę VAT?')">
+                                @csrf
+                                <button class="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm">+ Faktura zwykła</button>
+                            </form>
+                        @endif
+
+                        @if (! $final && $remaining > 0)
+                            <details class="inline">
+                                <summary class="cursor-pointer px-3 py-1.5 bg-amber-100 hover:bg-amber-200 rounded text-sm">+ Faktura zaliczkowa</summary>
+                                <form method="POST" action="{{ route('invoices.advance', $quote) }}" class="mt-2 flex gap-2 items-end">
+                                    @csrf
+                                    <label class="text-xs">Kwota brutto
+                                        <input type="number" step="0.01" name="amount_gross" required value="{{ $remaining }}"
+                                               class="mt-1 rounded border-gray-300 text-sm w-32"></label>
+                                    <input type="text" name="note" placeholder="Opis (opcjonalny)"
+                                           class="rounded border-gray-300 text-sm flex-1">
+                                    <button class="px-3 py-1.5 bg-amber-600 text-white rounded text-sm">Wystaw zaliczkę</button>
+                                </form>
+                            </details>
+                        @endif
+
+                        @if ($advances->isNotEmpty() && ! $final && $remaining > 0)
+                            <form method="POST" action="{{ route('invoices.final', $quote) }}" onsubmit="return confirm('Wystawić fakturę końcową rozliczeniową?')">
+                                @csrf
+                                <button class="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm">+ Faktura końcowa (rozlicz zaliczki)</button>
+                            </form>
+                        @endif
+                    </div>
                 </div>
             @endif
 
