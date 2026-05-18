@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Client;
 use App\Models\Quote;
 use App\Models\QuoteItem;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +26,14 @@ final class QuoteService
         $numbering = QuoteNumberGenerator::next($orgId);
         $items = $payload['items'] ?? [];
 
-        return DB::transaction(function () use ($payload, $numbering, $items, $orgId) {
+        // Powiązanie z Client: jeśli payload przekazał client_id - użyj.
+        // W przeciwnym razie spróbuj znaleźć po (email||nip) lub utwórz nowego.
+        $clientId = (int) ($payload['client_id'] ?? 0) ?: null;
+        if (! $clientId && ! empty($payload['client_name'])) {
+            $clientId = self::findOrCreateClientId($orgId, $payload);
+        }
+
+        return DB::transaction(function () use ($payload, $numbering, $items, $orgId, $clientId) {
             $quote = Quote::create([
                 'organization_id'    => $orgId,
                 'number'             => $numbering['number'],
@@ -33,6 +41,7 @@ final class QuoteService
                 'month'              => $numbering['month'],
                 'sequence'           => $numbering['sequence'],
                 'inquiry_id'         => $payload['inquiry_id']   ?? null,
+                'client_id'          => $clientId,
 
                 'client_name'        => $payload['client_name']    ?? '',
                 'client_email'       => $payload['client_email']   ?? null,
@@ -103,5 +112,41 @@ final class QuoteService
 
             return $quote;
         });
+    }
+
+    /**
+     * Znajduje istniejącego klienta po (NIP || email) lub tworzy nowego.
+     * Dzięki temu z czasem buduje się historia klientów per-organizacja.
+     */
+    private static function findOrCreateClientId(int $orgId, array $payload): ?int
+    {
+        $email = trim((string) ($payload['client_email'] ?? ''));
+        $nip   = trim((string) ($payload['client_nip']   ?? ''));
+        $name  = trim((string) ($payload['client_name']  ?? ''));
+
+        $query = Client::query()->where('organization_id', $orgId);
+        if ($nip !== '') {
+            $query->where('nip', $nip);
+        } elseif ($email !== '') {
+            $query->where('email', $email);
+        } else {
+            $query->where('name', $name);
+        }
+
+        $existing = $query->first();
+        if ($existing) {
+            return $existing->id;
+        }
+
+        $client = Client::create([
+            'organization_id' => $orgId,
+            'name'    => $name,
+            'email'   => $email ?: null,
+            'phone'   => $payload['client_phone']   ?? null,
+            'company' => $payload['client_company'] ?? null,
+            'nip'     => $nip ?: null,
+            'address' => $payload['client_address'] ?? null,
+        ]);
+        return $client->id;
     }
 }

@@ -33,6 +33,9 @@
                     <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
                         Raporty
                     </x-nav-link>
+                    <x-nav-link :href="route('clients.index')" :active="request()->routeIs('clients.*')">
+                        Klienci
+                    </x-nav-link>
                     <x-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">
                         Pojazdy
                     </x-nav-link>
