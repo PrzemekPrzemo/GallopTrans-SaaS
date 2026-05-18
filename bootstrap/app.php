@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureOrganization;
 use App\Http\Middleware\EnsureSubscribed;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,8 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Aliasy do użycia w routach.
         $middleware->alias([
-            'ensure.org'        => EnsureOrganization::class,
-            'ensure.subscribed' => EnsureSubscribed::class,
+            'ensure.org'         => EnsureOrganization::class,
+            'ensure.subscribed'  => EnsureSubscribed::class,
+            'ensure.super_admin' => EnsureSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

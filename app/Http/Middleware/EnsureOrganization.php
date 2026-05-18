@@ -16,7 +16,7 @@ final class EnsureOrganization
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
-        if ($user && ! $user->organization_id) {
+        if ($user && ! $user->organization_id && ! $user->is_super_admin) {
             if (! $request->is('onboarding*') && ! $request->is('logout')) {
                 return redirect()->route('onboarding.create');
             }
